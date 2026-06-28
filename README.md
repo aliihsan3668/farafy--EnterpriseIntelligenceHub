@@ -1,6 +1,6 @@
 # Farafy Pro — Enterprise Demand Forecasting & Inventory Intelligence Hub
 
-Live Production URL: [INSERT_YOUR_LIVE_VERCEL_LINK_HERE]
+Live Production URL: https://farafy.vercel.app/#
 SaaS Category: Business Intelligence (BI) / Predictive Operations Management
 UI Theme: Midnight Gold Premium B2B 
 
