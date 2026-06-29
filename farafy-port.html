@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Farafy Port — Customs Pre-Clearance Audit & Demurrage Runway Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#030712',
+            card: '#020617',
+            border: '#1e293b',
+            gold: { light: '#fbbf24', DEFAULT: '#f59e0b', dark: '#d97706' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #030712; font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+
+    .gold-gradient { background: linear-gradient(135deg, #fbbf24, #d97706); }
+    .gold-text { background: linear-gradient(135deg, #fbbf24, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gold-border { border: 1px solid rgba(251, 191, 36, 0.3); }
+    .card-base { background: #020617; border: 1px solid #1e293b; border-radius: 12px; }
+    .card-glow:hover { border-color: rgba(251, 191, 36, 0.25); box-shadow: 0 0 24px rgba(251, 191, 36, 0.06); transition: all 0.3s ease; }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      color: #030712;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      font-size: 13px;
+      letter-spacing: 0.025em;
+      transition: all 0.25s ease;
+    }
+    .btn-gold:hover {
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.45);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: transparent;
+      color: #f59e0b;
+      font-weight: 600;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 8px;
+      padding: 9px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      letter-spacing: 0.025em;
+      transition: all 0.25s ease;
+    }
+    .btn-outline:hover {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.07);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    }
+    .btn-slate {
+      background: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 9px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn-slate:hover { background: #1e293b; color: #e2e8f0; }
+
+    .badge-safe {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .badge-critical {
+      background: rgba(244, 63, 94, 0.1);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+      animation: pulseCritical 2s infinite;
+    }
+    .badge-opportunity {
+      background: rgba(59, 130, 246, 0.1);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .badge-warning {
+      background: rgba(251, 146, 60, 0.1);
+      color: #fb923c;
+      border: 1px solid rgba(251, 146, 60, 0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes pulseCritical {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.3); }
+      50% { box-shadow: 0 0 0 4px rgba(244, 63, 94, 0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+
+    .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+    .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569; }
+    .kpi-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+    .blur-rows { filter: blur(5px); user-select: none; pointer-events: none; }
+    .paywall-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 0%, rgba(2, 6, 23, 0.7) 20%, rgba(2, 6, 23, 0.97) 50%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      border-radius: 0 0 12px 12px;
+    }
+
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(3, 7, 18, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      animation: fadeInUp 0.25s ease;
+    }
+    .modal-card {
+      background: #020617;
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      border-radius: 16px;
+      max-width: 540px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 0 60px rgba(251, 191, 36, 0.08), 0 32px 64px rgba(0,0,0,0.6);
+    }
+
+    .payment-card {
+      background: #0a0f1e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .payment-card:hover { border-color: rgba(251, 191, 36, 0.3); }
+
+    .copy-btn {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { background: #1e293b; color: #f59e0b; border-color: rgba(245,158,11,0.3); }
+    .copy-btn.copied { background: rgba(34,197,94,0.1); color: #4ade80; border-color: rgba(34,197,94,0.3); }
+
+    .whatsapp-btn {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: white;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 14px 24px;
+      cursor: pointer;
+      border: none;
+      font-size: 14px;
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: all 0.25s;
+      box-shadow: 0 0 20px rgba(22, 163, 74, 0.25);
+      animation: glowPulse 3s infinite;
+    }
+    .whatsapp-btn:hover { box-shadow: 0 0 30px rgba(22, 163, 74, 0.5); transform: translateY(-1px); }
+
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(22, 163, 74, 0.25); }
+      50% { box-shadow: 0 0 35px rgba(22, 163, 74, 0.45); }
+    }
+
+    .header-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.4), rgba(251, 191, 36, 0.1), transparent);
+    }
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #1e293b 20%, #1e293b 80%, transparent);
+      margin: 32px 0;
+    }
+
+    .ticker-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+      animation: tickerBlink 1.5s infinite;
+    }
+    @keyframes tickerBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .risk-high { color: #f43f5e; font-weight: 600; }
+    .risk-med { color: #fb923c; font-weight: 600; }
+    .risk-low { color: #4ade80; font-weight: 600; }
+
+    table th { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; color: #475569; text-transform: uppercase; }
+    table td { font-size: 13px; color: #cbd5e1; vertical-align: middle; }
+
+    .stat-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #0a0f1e;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100">
+
+  <!-- HEADER -->
+  <header style="background: linear-gradient(180deg, #020617 0%, #030712 100%); border-bottom: 1px solid #0f172a;">
+    <div class="max-w-7xl mx-auto px-6 py-5">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center justify-center w-10 h-10 rounded-xl" style="background: linear-gradient(135deg, #fbbf24, #d97706);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9L12 2L21 9V20C21 20.5523 20.5523 21 20 21H15V15H9V21H4C3.44772 21 3 20.5523 3 20V9Z" fill="#030712"/>
+              <path d="M9 21V15H15V21" stroke="#030712" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl font-black tracking-tight gold-text">FARAFY PORT</span>
+              <span class="text-xs font-mono text-slate-600 border border-slate-800 rounded px-2 py-0.5">v2.4.1</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 font-mono">Customs Pre-Clearance Audit & Demurrage Runway Engine</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="stat-pill">
+            <span class="ticker-dot"></span>
+            <span>KICT / PICT Live</span>
+          </div>
+          <div class="stat-pill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#64748b" stroke-width="2"/><path d="M12 6v6l4 2" stroke="#64748b" stroke-width="2" stroke-linecap="round"/></svg>
+            <span id="clock-display">--:-- PKT</span>
+          </div>
+          <button class="btn-outline" onclick="downloadCSVTemplate()">
+            ↓ CSV Template
+          </button>
+          <label class="btn-gold" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#030712" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Upload Manifest CSV
+            <input type="file" id="csv-upload" accept=".csv" onchange="handleCSVUpload(event)" />
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="header-line"></div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+
+    <!-- UPLOAD NOTICE BANNER -->
+    <div id="upload-banner" class="mb-6 rounded-xl p-4 flex items-start gap-3" style="background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.15); display:none!important;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-shrink-0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <p class="text-sm font-semibold text-amber-400" id="banner-text">CSV manifest uploaded and processed successfully.</p>
+        <p class="text-xs text-slate-500 mt-0.5">All KPIs, visualizations, and risk assessments have been recalculated from your data.</p>
+      </div>
+    </div>
+
+    <!-- SECTION LABEL -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-1 h-6 rounded-full gold-gradient"></div>
+      <span class="text-xs font-mono font-semibold text-slate-500 uppercase tracking-widest">Port Operations Command Center</span>
+      <div class="flex-1" style="height:1px;background:#0f172a;"></div>
+      <span class="text-xs text-slate-600 font-mono">Karachi Port Trust — Active Cargo Audit</span>
+    </div>
+
+    <!-- KPI CARDS ROW -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+      <!-- KPI 1: Net Demurrage Burn Rate -->
+      <div class="card-base card-glow p-5 animate-fade-in-up" style="animation-delay:0.05s;">
+        <div class="kpi-label mb-3">Net Demurrage Burn Rate</div>
+        <div class="kpi-value text-rose-400 font-mono" id="kpi-burn-rate">PKR 0</div>
+        <div class="kpi-sub">/ Day accumulating</div>
+        <div class="mt-3 flex items-center gap-2">
+          <div class="flex-1 rounded-full overflow-hidden" style="height:3px;background:#0f172a;">
+            <div id="burn-bar" class="h-full rounded-full" style="background:linear-gradient(90deg,#f43f5e,#fb923c);width:0%;transition:width 0.8s ease;"></div>
+          </div>
+          <span class="text-xs text-slate-600" id="burn-containers">0 containers</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Demurrage Runway Clock -->
+      <div class="card-base card-glow p-5 animate-fade-in-up" style="animation-delay:0.1s;">
+        <div class="kpi-label mb-3">Avg. Remaining Free Days</div>
+        <div class="kpi-value gold-text font-mono" id="kpi-runway">0.0 days</div>
+        <div class="kpi-sub">Demurrage-free runway left</div>
+        <div class="mt-3 flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="1.5" opacity="0.4"/><path d="M12 6v6l4 2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="text-xs text-slate-600" id="runway-safe-count">0 safe containers tracked</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: FBR Valuation Risk -->
+      <div class="card-base card-glow p-5 animate-fade-in-up" style="animation-delay:0.15s;">
+        <div class="kpi-label mb-3">FBR Valuation Hold Risk</div>
+        <div class="kpi-value text-blue-400 font-mono" id="kpi-fbr-risk">0 flagged</div>
+        <div class="kpi-sub">Undervaluation discrepancy &gt;20%</div>
+        <div class="mt-3 flex items-center gap-2">
+          <span class="badge-opportunity text-xs" id="fbr-badge">Checking...</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Preserved Capital -->
+      <div class="card-base card-glow p-5 animate-fade-in-up" style="animation-delay:0.2s;">
+        <div class="kpi-label mb-3">Preventable Capital Preserved</div>
+        <div class="kpi-value" style="color:#4ade80;" id="kpi-capital">PKR 0</div>
+        <div class="kpi-sub">Profit margin at risk (&lt;3 runway days)</div>
+        <div class="mt-3">
+          <span class="text-xs text-slate-600" id="capital-sub">Goods at critical threshold</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CHART SECTION -->
+    <div class="card-base p-6 mb-8 animate-fade-in-up" style="animation-delay:0.25s;">
+      <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Port Runway Timeline — Days at Port vs. Free Days Allocation</h2>
+          <p class="text-xs text-slate-500 mt-1">Live container status visualization across KICT & Port Qasim terminals</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-sm" style="background:#f59e0b;opacity:0.9;"></div>
+            <span class="text-xs text-slate-400">Days at Port</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-sm" style="background:rgba(226,232,240,0.25);border:1px solid rgba(226,232,240,0.3);"></div>
+            <span class="text-xs text-slate-400">Free Days Allocated</span>
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;height:280px;">
+        <canvas id="runwayChart"></canvas>
+      </div>
+    </div>
+
+    <!-- FREIGHT INSPECTION MATRIX TABLE -->
+    <div class="animate-fade-in-up" style="animation-delay:0.3s;">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Active Port Freight Inspection Matrix</h2>
+          <p class="text-xs text-slate-500 mt-1">Customs compliance audit with actionable pre-clearance corrections</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge-safe">2 rows free preview</span>
+          <span class="badge-opportunity">Full unlock — PKR 5,000</span>
+        </div>
+      </div>
+
+      <div class="card-base overflow-hidden" style="position:relative;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;" id="main-table">
+            <thead>
+              <tr style="border-bottom:1px solid #1e293b;background:#030712;">
+                <th class="text-left px-4 py-3">Container ID</th>
+                <th class="text-left px-4 py-3">Category</th>
+                <th class="text-left px-4 py-3">HS Code</th>
+                <th class="text-left px-4 py-3">Carrier</th>
+                <th class="text-left px-4 py-3">Port Days / Free Days</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">Risk Level</th>
+                <th class="text-left px-4 py-3">Actionable Correction</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PAYWALL OVERLAY -->
+        <div class="paywall-overlay" id="paywall-overlay">
+          <div class="card-base p-8 mx-4 text-center max-w-md" style="border-color:rgba(251,191,36,0.25);box-shadow:0 0 60px rgba(251,191,36,0.06);">
+            <div class="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center gold-gradient">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C9.24 2 7 4.24 7 7v2H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-9a2 2 0 00-2-2h-2V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v2H9V7c0-1.66 1.34-3 3-3zm0 9a2 2 0 110 4 2 2 0 010-4z" fill="#030712"/></svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-100 mb-2">Unlock Full Audit Report</h3>
+            <p class="text-sm text-slate-400 mb-1">Step-by-step customs compliance corrections + auto-generated pre-clearance response sheets to eliminate demurrage charges.</p>
+            <p class="text-xs text-slate-600 mb-5">4 additional containers with full risk assessments, FBR valuation corrections, and carrier dispute letters.</p>
+            <button class="btn-gold w-full text-sm" onclick="openPaymentModal()">
+              Unlock All Rows — PKR 5,000
+            </button>
+            <p class="text-xs text-slate-600 mt-3">One-time document processing fee · Instant delivery via WhatsApp</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER DISCLAIMER -->
+    <div class="mt-10 pb-6">
+      <div class="section-divider"></div>
+      <div class="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <p class="text-xs font-mono text-slate-600">FARAFY PORT INTELLIGENCE ENGINE — FOR AUTHORIZED COMMERCIAL USE ONLY</p>
+          <p class="text-xs text-slate-700 mt-1">Data sourced from KPT, PACT, KICT, Port Qasim Authority terminal records. Exchange rate: 1 USD = 280 PKR (fixed parity). All demurrage calculations are estimations based on standard liner tariff tiers. Not a substitute for licensed customs clearing agent advisory.</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs font-mono gold-text font-bold">FARAFY</p>
+          <p class="text-xs text-slate-700 mt-0.5">Muhammad Ali Ihsan</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- PAYMENT MODAL -->
+  <div id="payment-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <!-- Modal Header -->
+      <div class="p-6 pb-4" style="border-bottom:1px solid #0f172a;">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center gold-gradient">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C9.24 2 7 4.24 7 7v2H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-9a2 2 0 00-2-2h-2V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v2H9V7c0-1.66 1.34-3 3-3zm0 9a2 2 0 110 4 2 2 0 010-4z" fill="#030712"/></svg>
+            </div>
+            <div>
+              <h3 class="font-black text-slate-100 text-lg">Customs Audit Unlock</h3>
+              <p class="text-xs text-slate-500">Document Processing Fee — PKR 5,000</p>
+            </div>
+          </div>
+          <button onclick="closePaymentModal()" class="text-slate-600 hover:text-slate-300 transition-colors p-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5">
+
+        <!-- What you get -->
+        <div class="rounded-xl p-4" style="background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.12);">
+          <p class="text-xs font-semibold text-amber-400 uppercase tracking-widest mb-3">What's Included</p>
+          <div class="space-y-2">
+            <div class="flex items-start gap-2 text-sm text-slate-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-shrink-0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/></svg>
+              Full 6-container compliance audit with step-by-step corrections
+            </div>
+            <div class="flex items-start gap-2 text-sm text-slate-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-shrink-0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/></svg>
+              Auto-generated pre-clearance FBR response letters (PDF-ready)
+            </div>
+            <div class="flex items-start gap-2 text-sm text-slate-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-shrink-0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/></svg>
+              Carrier demurrage dispute letter templates (per container)
+            </div>
+            <div class="flex items-start gap-2 text-sm text-slate-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="mt-0.5 flex-shrink-0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/></svg>
+              HS Code valuation benchmarks vs. FBR Valuation Ruling Database
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Label -->
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Select Payment Method</p>
+
+          <!-- JazzCash -->
+          <div class="payment-card mb-3 transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#e11d48,#f43f5e);">
+                  <span class="text-white font-black text-xs">JC</span>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-100">JazzCash Mobile Wallet</p>
+                  <p class="text-xs text-slate-500">Instant transfer · No fees</p>
+                </div>
+              </div>
+              <span class="badge-safe" style="font-size:10px;">Recommended</span>
+            </div>
+            <div class="flex items-center justify-between" style="background:#030712;border:1px solid #1e293b;border-radius:7px;padding:8px 12px;">
+              <span class="font-mono text-sm text-slate-200">0321-4567890</span>
+              <button class="copy-btn" onclick="copyToClipboard('0321-4567890', this)">Copy</button>
+            </div>
+            <p class="text-xs text-slate-600 mt-2">Account: Farafy Logistics Solutions (Pvt.) Ltd.</p>
+          </div>
+
+          <!-- NayaPay -->
+          <div class="payment-card mb-3 transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
+                  <span class="text-white font-black text-xs">NP</span>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-100">NayaPay Digital Wallet</p>
+                  <p class="text-xs text-slate-500">Scan QR or send to ID</p>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between" style="background:#030712;border:1px solid #1e293b;border-radius:7px;padding:8px 12px;">
+              <span class="font-mono text-sm text-slate-200">farafy.port@nayapay</span>
+              <button class="copy-btn" onclick="copyToClipboard('farafy.port@nayapay', this)">Copy</button>
+            </div>
+            <p class="text-xs text-slate-600 mt-2">Account: Farafy Port Intelligence</p>
+          </div>
+
+          <!-- Payoneer -->
+          <div class="payment-card mb-3 transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#f97316,#ea580c);">
+                  <span class="text-white font-black text-xs">PY</span>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-100">Payoneer (USD / PKR)</p>
+                  <p class="text-xs text-slate-500">International wire · USD $17.86 equiv.</p>
+                </div>
+              </div>
+              <span class="badge-opportunity" style="font-size:10px;">Intl. Transfer</span>
+            </div>
+            <div class="flex items-center justify-between" style="background:#030712;border:1px solid #1e293b;border-radius:7px;padding:8px 12px;">
+              <span class="font-mono text-sm text-slate-200">billing@farafy.ai</span>
+              <button class="copy-btn" onclick="copyToClipboard('billing@farafy.ai', this)">Copy</button>
+            </div>
+            <p class="text-xs text-slate-600 mt-2">Include reference: FARAFY-AUDIT-2024</p>
+          </div>
+        </div>
+
+        <!-- Amount reminder -->
+        <div class="flex items-center justify-between rounded-xl p-4" style="background:#030712;border:1px solid #1e293b;">
+          <div>
+            <p class="text-xs text-slate-500">Total Amount Due</p>
+            <p class="text-2xl font-black gold-text font-mono">PKR 5,000</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-500">Processing Time</p>
+            <p class="text-sm font-bold text-green-400">Instant Delivery</p>
+            <p class="text-xs text-slate-600">via WhatsApp after verification</p>
+          </div>
+        </div>
+
+        <!-- WhatsApp CTA -->
+        <div>
+          <p class="text-xs text-slate-500 mb-2 text-center">After completing payment, upload your receipt screenshot below:</p>
+          <a href="https://wa.me/923001234567?text=Hi%20Farafy%20Port%2C%20I%20have%20completed%20the%20PKR%205%2C000%20customs%20audit%20payment.%20Please%20find%20my%20receipt%20attached." target="_blank" rel="noopener noreferrer">
+            <button class="whatsapp-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Upload Payment Receipt on WhatsApp
+            </button>
+          </a>
+        </div>
+
+        <p class="text-xs text-center text-slate-700">By proceeding, you agree to Farafy Port's terms of service. All transactions are final. Delivery within 2 business hours of payment confirmation.</p>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CONSTANTS & CONFIGURATION
+    // ─────────────────────────────────────────────────────────────────────────────
+    const USD_TO_PKR = 280;
+    const DEMURRAGE_RATE_PER_DAY_USD = 50; // Standard tier: $50/day excess
+    const CRITICAL_RUNWAY_THRESHOLD = 3;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // PRE-LOADED DATASET — 6 Realistic Pakistani Import Containers
+    // ─────────────────────────────────────────────────────────────────────────────
+    const defaultDataset = [
+      {
+        ContainerID: 'KICT-TXU4823901',
+        MaterialCategory: 'Industrial Chemicals (PTA)',
+        HSCode: '2917.36',
+        DeclaredValueUSD: 48500,
+        ShippingLineFreeDays: 7,
+        DaysAtPort: 11,
+        CarrierName: 'COSCO Shipping',
+        Terminal: 'KICT'
+      },
+      {
+        ContainerID: 'PQCT-MSC2947561',
+        MaterialCategory: 'Textile Machinery (Looms)',
+        HSCode: '8446.21',
+        DeclaredValueUSD: 92000,
+        ShippingLineFreeDays: 10,
+        DaysAtPort: 8,
+        CarrierName: 'MSC Pakistan',
+        Terminal: 'Port Qasim'
+      },
+      {
+        ContainerID: 'KICT-EVR3817204',
+        MaterialCategory: 'HDPE Raw Plastic Resin',
+        HSCode: '3901.20',
+        DeclaredValueUSD: 31200,
+        ShippingLineFreeDays: 7,
+        DaysAtPort: 6,
+        CarrierName: 'Evergreen Marine',
+        Terminal: 'KICT'
+      },
+      {
+        ContainerID: 'PICT-HMM5503872',
+        MaterialCategory: 'Polyester Yarn (POY)',
+        HSCode: '5402.46',
+        DeclaredValueUSD: 18700,
+        ShippingLineFreeDays: 5,
+        DaysAtPort: 13,
+        CarrierName: 'HMM Co. Ltd',
+        Terminal: 'PICT'
+      },
+      {
+        ContainerID: 'PQCT-ZIM1092845',
+        MaterialCategory: 'Caustic Soda (NaOH)',
+        HSCode: '2815.11',
+        DeclaredValueUSD: 22100,
+        ShippingLineFreeDays: 7,
+        DaysAtPort: 5,
+        CarrierName: 'ZIM Integrated',
+        Terminal: 'Port Qasim'
+      },
+      {
+        ContainerID: 'KICT-APL8829014',
+        MaterialCategory: 'Dye Intermediates (Disperse)',
+        HSCode: '3204.11',
+        DeclaredValueUSD: 14200,
+        ShippingLineFreeDays: 7,
+        DaysAtPort: 7,
+        CarrierName: 'ONE (Ocean Network)',
+        Terminal: 'KICT'
+      }
+    ];
+
+    let activeDataset = [...defaultDataset];
+    let runwayChart = null;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CLOCK
+    // ─────────────────────────────────────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      const pkt = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Karachi' }));
+      const h = String(pkt.getHours()).padStart(2, '0');
+      const m = String(pkt.getMinutes()).padStart(2, '0');
+      document.getElementById('clock-display').textContent = `${h}:${m} PKT`;
+    }
+    updateClock();
+    setInterval(updateClock, 60000);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // KPI CALCULATIONS
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function computeValuationDiscrepancyIndex(data) {
+      // Group declared values by HSCode
+      const byHS = {};
+      data.forEach(c => {
+        const code = c.HSCode;
+        if (!byHS[code]) byHS[code] = [];
+        byHS[code].push(c.DeclaredValueUSD);
+      });
+
+      // Compute median per HS code
+      const medians = {};
+      Object.keys(byHS).forEach(code => {
+        const sorted = [...byHS[code]].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        medians[code] = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      });
+
+      // Flag containers with value >20% below median
+      return data.map(c => {
+        const median = medians[c.HSCode];
+        const discrepancyPct = median > 0 ? ((median - c.DeclaredValueUSD) / median) * 100 : 0;
+        return { ...c, fbrRisk: discrepancyPct > 20, discrepancyPct };
+      });
+    }
+
+    function calculateKPIs(data) {
+      const enriched = computeValuationDiscrepancyIndex(data);
+
+      // KPI 1: Net Demurrage Burn Rate
+      let dailyBurnUSD = 0;
+      let burningContainers = 0;
+      enriched.forEach(c => {
+        const excessDays = c.DaysAtPort - c.ShippingLineFreeDays;
+        if (excessDays > 0) {
+          dailyBurnUSD += excessDays > 0 ? DEMURRAGE_RATE_PER_DAY_USD : 0;
+          burningContainers++;
+        }
+      });
+      const dailyBurnPKR = dailyBurnUSD * USD_TO_PKR;
+
+      // KPI 2: Average Remaining Free Days (only safe containers)
+      const safeContainers = enriched.filter(c => c.DaysAtPort <= c.ShippingLineFreeDays);
+      const avgRunway = safeContainers.length > 0
+        ? safeContainers.reduce((sum, c) => sum + (c.ShippingLineFreeDays - c.DaysAtPort), 0) / safeContainers.length
+        : 0;
+
+      // KPI 3: FBR Valuation Risk
+      const fbrFlagged = enriched.filter(c => c.fbrRisk).length;
+
+      // KPI 4: Capital at Risk (safe containers with < 3 runway days)
+      const atRiskContainers = safeContainers.filter(c => (c.ShippingLineFreeDays - c.DaysAtPort) < CRITICAL_RUNWAY_THRESHOLD);
+      const capitalAtRiskUSD = atRiskContainers.reduce((sum, c) => sum + c.DeclaredValueUSD, 0);
+      const capitalAtRiskPKR = capitalAtRiskUSD * USD_TO_PKR;
+
+      return {
+        dailyBurnPKR, dailyBurnUSD, burningContainers,
+        avgRunway, safeContainers: safeContainers.length,
+        fbrFlagged,
+        capitalAtRiskPKR, atRiskContainers: atRiskContainers.length,
+        enriched
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDER KPI CARDS
+    // ─────────────────────────────────────────────────────────────────────────────
+    function formatPKR(value) {
+      return 'PKR ' + Math.round(value).toLocaleString('en-PK');
+    }
+
+    function renderKPIs(kpis) {
+      // KPI 1
+      document.getElementById('kpi-burn-rate').textContent =
+        kpis.dailyBurnPKR > 0 ? formatPKR(kpis.dailyBurnPKR) + ' / Day' : 'PKR 0 / Day';
+      const burnPct = Math.min((kpis.burningContainers / Math.max(activeDataset.length, 1)) * 100, 100);
+      document.getElementById('burn-bar').style.width = burnPct + '%';
+      document.getElementById('burn-containers').textContent =
+        kpis.burningContainers + ' container' + (kpis.burningContainers !== 1 ? 's' : '');
+
+      // KPI 2
+      document.getElementById('kpi-runway').textContent = kpis.avgRunway.toFixed(1) + ' days';
+      document.getElementById('runway-safe-count').textContent =
+        kpis.safeContainers + ' safe container' + (kpis.safeContainers !== 1 ? 's' : '') + ' tracked';
+
+      // KPI 3
+      document.getElementById('kpi-fbr-risk').textContent =
+        kpis.fbrFlagged + ' flagged';
+      const fbrBadge = document.getElementById('fbr-badge');
+      if (kpis.fbrFlagged === 0) {
+        fbrBadge.textContent = 'No anomalies detected';
+        fbrBadge.className = 'badge-safe';
+      } else if (kpis.fbrFlagged === 1) {
+        fbrBadge.textContent = 'Review required';
+        fbrBadge.className = 'badge-warning';
+      } else {
+        fbrBadge.textContent = 'Multiple holds likely';
+        fbrBadge.className = 'badge-critical';
+      }
+
+      // KPI 4
+      document.getElementById('kpi-capital').textContent = formatPKR(kpis.capitalAtRiskPKR);
+      document.getElementById('capital-sub').textContent =
+        kpis.atRiskContainers + ' container' + (kpis.atRiskContainers !== 1 ? 's' : '') + ' at critical threshold';
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDER CHART
+    // ─────────────────────────────────────────────────────────────────────────────
+    function renderChart(data) {
+      const labels = data.map(c => c.ContainerID.split('-')[1] || c.ContainerID);
+      const daysAtPort = data.map(c => c.DaysAtPort);
+      const freeDays = data.map(c => c.ShippingLineFreeDays);
+
+      const ctx = document.getElementById('runwayChart').getContext('2d');
+
+      if (runwayChart) runwayChart.destroy();
+
+      runwayChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Days at Port',
+              data: daysAtPort,
+              backgroundColor: data.map(c =>
+                c.DaysAtPort > c.ShippingLineFreeDays
+                  ? 'rgba(244, 63, 94, 0.85)'
+                  : 'rgba(245, 158, 11, 0.85)'
+              ),
+              borderColor: data.map(c =>
+                c.DaysAtPort > c.ShippingLineFreeDays
+                  ? '#f43f5e'
+                  : '#f59e0b'
+              ),
+              borderWidth: 1,
+              borderRadius: 4,
+              borderSkipped: false,
+            },
+            {
+              label: 'Free Days Allocated',
+              data: freeDays,
+              backgroundColor: 'rgba(226, 232, 240, 0.12)',
+              borderColor: 'rgba(226, 232, 240, 0.25)',
+              borderWidth: 1,
+              borderRadius: 4,
+              borderSkipped: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#020617',
+              borderColor: '#1e293b',
+              borderWidth: 1,
+              titleColor: '#f1f5f9',
+              bodyColor: '#94a3b8',
+              padding: 12,
+              titleFont: { family: 'JetBrains Mono', size: 11 },
+              bodyFont: { family: 'Inter', size: 12 },
+              callbacks: {
+                title: (items) => {
+                  const idx = items[0].dataIndex;
+                  return data[idx].ContainerID;
+                },
+                afterBody: (items) => {
+                  const idx = items[0].dataIndex;
+                  const c = data[idx];
+                  const excess = c.DaysAtPort - c.ShippingLineFreeDays;
+                  if (excess > 0) {
+                    const feePKR = excess * DEMURRAGE_RATE_PER_DAY_USD * USD_TO_PKR;
+                    return [`⚠️ Demurrage: PKR ${feePKR.toLocaleString()}`];
+                  }
+                  return [`✓ Runway: ${c.ShippingLineFreeDays - c.DaysAtPort} days remaining`];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(30, 41, 59, 0.5)', lineWidth: 1 },
+              ticks: { color: '#475569', font: { family: 'JetBrains Mono', size: 10 } },
+              border: { display: false }
+            },
+            y: {
+              grid: { color: 'rgba(30, 41, 59, 0.5)', lineWidth: 1 },
+              ticks: {
+                color: '#475569',
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: v => v + ' days'
+              },
+              border: { display: false },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // GENERATE ACTIONABLE CORRECTIONS
+    // ─────────────────────────────────────────────────────────────────────────────
+    function getActionableCorrection(container, enriched) {
+      const excess = container.DaysAtPort - container.ShippingLineFreeDays;
+      const runway = container.ShippingLineFreeDays - container.DaysAtPort;
+      const fbrRisk = enriched.fbrRisk;
+
+      if (excess > 0 && fbrRisk) {
+        return { text: 'File FBR Valuation Response + Submit demurrage extension waiver to ' + container.CarrierName, urgency: 'critical' };
+      } else if (excess > 0) {
+        return { text: 'Issue demurrage dispute letter to ' + container.CarrierName + ' citing port congestion force majeure', urgency: 'critical' };
+      } else if (fbrRisk) {
+        return { text: 'File pre-emptive FBR valuation justification with comparable transaction data before customs examination', urgency: 'high' };
+      } else if (runway <= CRITICAL_RUNWAY_THRESHOLD) {
+        return { text: 'Expedite GD filing + Initiate examination booking at terminal immediately — ' + runway + ' days remaining', urgency: 'medium' };
+      } else {
+        return { text: 'Schedule GD lodgment and pre-arrival documentation verification within next 48 hours', urgency: 'low' };
+      }
+    }
+
+    function getStatusBadge(container) {
+      const excess = container.DaysAtPort - container.ShippingLineFreeDays;
+      const runway = container.ShippingLineFreeDays - container.DaysAtPort;
+
+      if (excess > 0) {
+        return `<span class="badge-critical">Active Demurrage</span>`;
+      } else if (runway <= CRITICAL_RUNWAY_THRESHOLD) {
+        return `<span class="badge-warning">Critical Runway</span>`;
+      } else {
+        return `<span class="badge-safe">Clear Runway</span>`;
+      }
+    }
+
+    function getRiskBadge(container, enriched) {
+      const excess = container.DaysAtPort - container.ShippingLineFreeDays;
+      const runway = container.ShippingLineFreeDays - container.DaysAtPort;
+      const fbrRisk = enriched.fbrRisk;
+      const discPct = enriched.discrepancyPct;
+
+      if (excess > 0 && fbrRisk) {
+        return `<span class="risk-high">🔴 CRITICAL</span>`;
+      } else if (excess > 0) {
+        return `<span class="risk-high">🔴 HIGH</span>`;
+      } else if (fbrRisk) {
+        return `<span class="risk-med">🟠 MEDIUM<br><span style="font-size:10px;color:#64748b;font-weight:400;">FBR −${discPct.toFixed(0)}% val.</span></span>`;
+      } else if (runway <= CRITICAL_RUNWAY_THRESHOLD) {
+        return `<span class="risk-med">🟠 ELEVATED</span>`;
+      } else {
+        return `<span class="risk-low">🟢 LOW</span>`;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDER TABLE
+    // ─────────────────────────────────────────────────────────────────────────────
+    function renderTable(enrichedData) {
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = '';
+
+      enrichedData.forEach((c, idx) => {
+        const correction = getActionableCorrection(c, c);
+        const excess = c.DaysAtPort - c.ShippingLineFreeDays;
+        const runway = c.ShippingLineFreeDays - c.DaysAtPort;
+        const isBlurred = idx >= 2;
+
+        const correctionColor = correction.urgency === 'critical' ? '#f43f5e' :
+                                correction.urgency === 'high' ? '#fb923c' :
+                                correction.urgency === 'medium' ? '#fbbf24' : '#4ade80';
+
+        const row = document.createElement('tr');
+        row.className = isBlurred ? 'blur-rows' : '';
+        row.style.borderBottom = '1px solid #0f172a';
+        row.innerHTML = `
+          <td class="px-4 py-3">
+            <span class="font-mono text-xs" style="color:#f59e0b;">${c.ContainerID}</span>
+            <br><span class="text-xs text-slate-600">${c.Terminal || ''}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-sm">${c.MaterialCategory}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="font-mono text-xs px-2 py-1 rounded" style="background:#0a0f1e;border:1px solid #1e293b;color:#94a3b8;">${c.HSCode}</span>
+          </td>
+          <td class="px-4 py-3 text-xs text-slate-400">${c.CarrierName}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold" style="color:${excess > 0 ? '#f43f5e' : '#fbbf24'};">${c.DaysAtPort}d</span>
+              <span class="text-slate-600 text-xs">/</span>
+              <span class="font-mono text-xs text-slate-400">${c.ShippingLineFreeDays}d free</span>
+            </div>
+            ${excess > 0 ?
+              `<span class="text-xs" style="color:#f43f5e;">+${excess} days over · PKR ${(excess * DEMURRAGE_RATE_PER_DAY_USD * USD_TO_PKR).toLocaleString()}</span>` :
+              `<span class="text-xs text-slate-600">${runway} days remaining</span>`
+            }
+          </td>
+          <td class="px-4 py-3">${getStatusBadge(c)}</td>
+          <td class="px-4 py-3">${getRiskBadge(c, c)}</td>
+          <td class="px-4 py-3" style="max-width:220px;">
+            <p class="text-xs leading-relaxed" style="color:${correctionColor};">${correction.text}</p>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Adjust paywall overlay height dynamically
+      const paywallOverlay = document.getElementById('paywall-overlay');
+      paywallOverlay.style.display = enrichedData.length <= 2 ? 'none' : 'flex';
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // MAIN RENDER FUNCTION
+    // ─────────────────────────────────────────────────────────────────────────────
+    function renderDashboard(data) {
+      activeDataset = data;
+      const kpis = calculateKPIs(data);
+      renderKPIs(kpis);
+      renderChart(data);
+      renderTable(kpis.enriched);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CSV TEMPLATE DOWNLOADER
+    // ─────────────────────────────────────────────────────────────────────────────
+    function downloadCSVTemplate() {
+      const headers = 'ContainerID,MaterialCategory,HSCode,DeclaredValueUSD,ShippingLineFreeDays,DaysAtPort,CarrierName';
+      const sampleRows = [
+        'KICT-SAMPLE001,Industrial Chemicals (PTA),2917.36,48500,7,11,COSCO Shipping',
+        'PQCT-SAMPLE002,Textile Machinery (Looms),8446.21,92000,10,8,MSC Pakistan',
+        'PICT-SAMPLE003,HDPE Raw Plastic Resin,3901.20,31200,7,6,Evergreen Marine'
+      ];
+      const csvContent = [headers, ...sampleRows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'farafy_port_logistics_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CSV UPLOAD & PARSE
+    // ─────────────────────────────────────────────────────────────────────────────
+    function handleCSVUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const text = e.target.result;
+          const lines = text.trim().split('\n');
+          if (lines.length < 2) {
+            showBanner('CSV file appears empty or has no data rows.', true);
+            return;
+          }
+
+          const headerLine = lines[0].trim();
+          const expectedHeaders = ['ContainerID','MaterialCategory','HSCode','DeclaredValueUSD','ShippingLineFreeDays','DaysAtPort','CarrierName'];
+          const actualHeaders = headerLine.split(',').map(h => h.trim().replace(/"/g,''));
+
+          // Validate headers
+          const missingHeaders = expectedHeaders.filter(h => !actualHeaders.includes(h));
+          if (missingHeaders.length > 0) {
+            showBanner(`Missing required columns: ${missingHeaders.join(', ')}. Please use the provided CSV template.`, true);
+            return;
+          }
+
+          const idxMap = {};
+          expectedHeaders.forEach(h => { idxMap[h] = actualHeaders.indexOf(h); });
+
+          const parsedData = [];
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            const cols = line.split(',').map(c => c.trim().replace(/"/g,''));
+            const row = {
+              ContainerID: cols[idxMap['ContainerID']],
+              MaterialCategory: cols[idxMap['MaterialCategory']],
+              HSCode: cols[idxMap['HSCode']],
+              DeclaredValueUSD: parseFloat(cols[idxMap['DeclaredValueUSD']]) || 0,
+              ShippingLineFreeDays: parseInt(cols[idxMap['ShippingLineFreeDays']]) || 0,
+              DaysAtPort: parseInt(cols[idxMap['DaysAtPort']]) || 0,
+              CarrierName: cols[idxMap['CarrierName']],
+              Terminal: 'Uploaded'
+            };
+            parsedData.push(row);
+          }
+
+          if (parsedData.length === 0) {
+            showBanner('No valid data rows found in the uploaded CSV.', true);
+            return;
+          }
+
+          renderDashboard(parsedData);
+          showBanner(`✓ Successfully parsed ${parsedData.length} containers from ${file.name}. All metrics recalculated.`, false);
+
+        } catch(err) {
+          showBanner('Failed to parse CSV file. Please ensure the file uses comma-separated format and matches the template.', true);
+        }
+      };
+      reader.readAsText(file);
+
+      // Reset file input
+      event.target.value = '';
+    }
+
+    function showBanner(message, isError) {
+      const banner = document.getElementById('upload-banner');
+      const bannerText = document.getElementById('banner-text');
+      bannerText.textContent = message;
+      bannerText.style.color = isError ? '#f87171' : '#fbbf24';
+      banner.style.display = 'flex';
+      banner.style.background = isError ? 'rgba(244,63,94,0.05)' : 'rgba(251,191,36,0.05)';
+      banner.style.borderColor = isError ? 'rgba(244,63,94,0.15)' : 'rgba(251,191,36,0.15)';
+      setTimeout(() => { banner.style.display = 'none'; }, 8000);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // MODAL CONTROLS
+    // ─────────────────────────────────────────────────────────────────────────────
+    function openPaymentModal() {
+      document.getElementById('payment-modal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('payment-modal').addEventListener('click', function(e) {
+      if (e.target === this) closePaymentModal();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // COPY TO CLIPBOARD
+    // ─────────────────────────────────────────────────────────────────────────────
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        // Fallback for environments without clipboard API
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      renderDashboard(defaultDataset);
+    });
+  </script>
+</body>
+</html>
