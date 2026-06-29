@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Farafy — Strategic Procurement & Supplier Risk Auditor</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold-start: #fbbf24;
+    --gold-mid: #f59e0b;
+    --gold-end: #d97706;
+    --bg-base: #030712;
+    --bg-card: #0c1220;
+    --bg-card-alt: #0f172a;
+    --border: #1e293b;
+    --border-mid: #263548;
+    --text-primary: #f1f5f9;
+    --text-muted: #64748b;
+    --text-dim: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold-end); }
+
+  /* Gold gradient utilities */
+  .gold-gradient { background: linear-gradient(135deg, var(--gold-start), var(--gold-end)); }
+  .gold-text { background: linear-gradient(90deg, var(--gold-start), var(--gold-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .gold-border { border-color: rgba(251, 191, 36, 0.25); }
+  .gold-glow { box-shadow: 0 0 20px rgba(251, 191, 36, 0.15), 0 0 40px rgba(251, 191, 36, 0.05); }
+
+  /* Card base */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+  }
+  .card:hover { border-color: rgba(251, 191, 36, 0.2); box-shadow: 0 0 24px rgba(251, 191, 36, 0.08); }
+  .card-alt { background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: 12px; }
+
+  /* Buttons */
+  .btn-gold {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #030712;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-gold:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(251, 191, 36, 0.35); }
+  .btn-gold:active { transform: translateY(0); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold-start);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-outline:hover { background: rgba(251, 191, 36, 0.07); border-color: rgba(251, 191, 36, 0.6); box-shadow: 0 0 12px rgba(251, 191, 36, 0.1); }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.04);
+    color: #94a3b8;
+    border: 1px solid var(--border);
+    font-weight: 500;
+    font-size: 0.8125rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+  /* Status badges */
+  .badge-low   { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+  .badge-med   { background: rgba(59,130,246,0.1);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+  .badge-high  { background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.3);  }
+  .badge-crit  { background: rgba(220,38,38,0.15);  color: #ef4444; border: 1px solid rgba(220,38,38,0.4); box-shadow: 0 0 8px rgba(239,68,68,0.2); }
+
+  /* KPI cards */
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-mid), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .kpi-card:hover::before { opacity: 1; }
+  .kpi-card:hover { border-color: rgba(251,191,36,0.25); box-shadow: 0 8px 32px rgba(251,191,36,0.07); transform: translateY(-2px); }
+
+  /* Table */
+  .risk-table th { background: #080f1d; color: #475569; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .risk-table td { padding: 11px 14px; border-bottom: 1px solid rgba(30,41,59,0.6); font-size: 0.825rem; vertical-align: middle; }
+  .risk-table tr { transition: background 0.15s; }
+  .risk-table tbody tr:hover { background: rgba(251,191,36,0.03); }
+  .risk-table tbody tr:last-child td { border-bottom: none; }
+
+  /* Mono font */
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Warning flash */
+  @keyframes flash-warning {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+  }
+  .flash { animation: flash-warning 1.8s ease-in-out infinite; }
+
+  /* Pulse dot */
+  @keyframes pulse-dot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+  }
+  .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+  /* Fade in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp 0.5s ease forwards; }
+
+  /* Chart container */
+  .chart-container { position: relative; width: 100%; height: 280px; }
+
+  /* Select */
+  select.dark-select {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.825rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px !important;
+    cursor: pointer;
+  }
+  select.dark-select:focus { outline: none; border-color: rgba(251,191,36,0.5); box-shadow: 0 0 0 3px rgba(251,191,36,0.1); }
+  select.dark-select option { background: #0f172a; }
+
+  /* Input file hidden */
+  input[type="file"] { display: none; }
+
+  /* Logo mark */
+  .logo-f {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1rem; color: #030712;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+
+  /* Number ticker */
+  @keyframes count-up { from { opacity: 0; } to { opacity: 1; } }
+  .num-reveal { animation: count-up 0.4s ease; }
+
+  /* Horizontal rule */
+  .hr-gold { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(251,191,36,0.2), transparent); margin: 0; }
+
+  /* Tooltip */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #94a3b8; font-size: 0.7rem; padding: 5px 9px;
+    border-radius: 6px; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; border: 1px solid #334155;
+    z-index: 50;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  /* Responsive override */
+  @media (max-width: 640px) {
+    .kpi-card { padding: 14px; }
+    .chart-container { height: 220px; }
+    .risk-table th, .risk-table td { padding: 8px 10px; font-size: 0.75rem; }
+  }
+
+  /* Loading shimmer */
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #0c1220 25%, #162030 50%, #0c1220 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HEADER / NAV
+══════════════════════════════════════════════════════════════ -->
+<header style="border-bottom: 1px solid #1e293b; background: rgba(3,7,18,0.95); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100;">
+  <div style="max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 58px;">
+    <!-- Brand -->
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div class="logo-f">F</div>
+      <div>
+        <div style="font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em; line-height: 1.1;">Farafy</div>
+        <div style="font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500;">Strategic Procurement Intelligence</div>
+      </div>
+    </div>
+
+    <!-- Nav links (desktop) -->
+    <nav style="display: flex; align-items: center; gap: 4px;" class="hidden-mobile">
+      <a href="#dashboard" style="font-size: 0.8rem; color: #64748b; padding: 6px 12px; border-radius: 6px; text-decoration: none; transition: color 0.2s; font-weight: 500;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">Dashboard</a>
+      <a href="#analytics" style="font-size: 0.8rem; color: #64748b; padding: 6px 12px; border-radius: 6px; text-decoration: none; transition: color 0.2s; font-weight: 500;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">Analytics</a>
+      <a href="#risk-matrix" style="font-size: 0.8rem; color: #64748b; padding: 6px 12px; border-radius: 6px; text-decoration: none; transition: color 0.2s; font-weight: 500;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">Risk Matrix</a>
+    </nav>
+
+    <!-- Actions -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 6px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); border-radius: 20px; padding: 4px 10px; font-size: 0.7rem; color: #fbbf24; font-weight: 600;">
+        <div class="pulse-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #fbbf24;"></div>
+        LIVE
+      </div>
+      <button class="btn-gold" style="padding: 7px 14px;" onclick="triggerFileUpload()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Ingest CSV
+      </button>
+      <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileUpload(event)" />
+    </div>
+  </div>
+</header>
+
+<style>
+  @media (max-width: 640px) { .hidden-mobile { display: none !important; } }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO SECTION
+══════════════════════════════════════════════════════════════ -->
+<section id="dashboard" style="max-width: 1400px; margin: 0 auto; padding: 36px 20px 0;">
+  <!-- Page title row -->
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+        <span style="font-size: 0.7rem; color: var(--gold-mid); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); padding: 3px 10px; border-radius: 4px;">Strategic Intelligence Suite</span>
+      </div>
+      <h1 style="font-size: clamp(1.4rem, 3vw, 2.1rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.1; color: #f1f5f9;">
+        Supplier Risk &amp; <span class="gold-text">Procurement Audit</span>
+      </h1>
+      <p style="color: #64748b; font-size: 0.85rem; margin-top: 6px; max-width: 480px;">
+        McKinsey-grade concentration analysis, geopolitical exposure scoring, and cost deflection modelling — powered by your own data.
+      </p>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <button class="btn-ghost" style="padding: 8px 14px;" onclick="downloadTemplate()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CSV Template
+      </button>
+      <button class="btn-outline" style="padding: 8px 14px;" onclick="exportStrategy()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Export Strategy
+      </button>
+    </div>
+  </div>
+
+  <!-- Ingestion status bar -->
+  <div id="ingestBanner" class="card-alt" style="padding: 12px 16px; margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-left: 3px solid rgba(251,191,36,0.4);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="font-size: 0.8rem; color: #94a3b8;" id="ingestMsg">Running on <strong style="color: #f1f5f9;">pre-loaded baseline dataset</strong> — 32 procurement records across 10 strategic vendors.</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #475569; font-family: 'JetBrains Mono', monospace;">
+      <span id="recordCount">32 records</span> · <span id="dateRange">FY 2024–25</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     KPI CARDS
+══════════════════════════════════════════════════════════════ -->
+<section style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px;">
+
+    <!-- 1: Supplier Breadth -->
+    <div class="kpi-card fade-up" style="animation-delay: 0s;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div style="background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); border-radius: 8px; padding: 7px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <span class="badge-low" style="font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;">GLOBAL</span>
+      </div>
+      <div class="mono" style="font-size: 2.4rem; font-weight: 700; line-height: 1; color: #fbbf24;" id="kpi-breadth">10</div>
+      <div style="font-size: 0.78rem; color: #64748b; margin-top: 5px; font-weight: 500;" data-tip="Distinct active suppliers in your procurement network">Supplier Breadth</div>
+      <div style="font-size: 0.7rem; color: #334155; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b;">Active vendor network</div>
+    </div>
+
+    <!-- 2: HHI -->
+    <div class="kpi-card fade-up" style="animation-delay: 0.07s;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 7px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <span id="hhi-badge" class="badge-high" style="font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;">HHI RISK</span>
+      </div>
+      <div class="mono" style="font-size: 2.4rem; font-weight: 700; line-height: 1; color: #f87171;" id="kpi-hhi">0</div>
+      <div style="font-size: 0.78rem; color: #64748b; margin-top: 5px; font-weight: 500;" data-tip="Herfindahl-Hirschman Index: sum of squared spend share percentages. >2500 = High Risk">HHI Concentration Score</div>
+      <div id="hhi-warning" style="font-size: 0.7rem; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; color: #334155;"></div>
+    </div>
+
+    <!-- 3: Geopolitical Index -->
+    <div class="kpi-card fade-up" style="animation-delay: 0.14s;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 7px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <span id="geo-badge" class="badge-med" style="font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;">GEO</span>
+      </div>
+      <div class="mono" style="font-size: 2.4rem; font-weight: 700; line-height: 1; color: #60a5fa;" id="kpi-geo">0.00</div>
+      <div style="font-size: 0.78rem; color: #64748b; margin-top: 5px; font-weight: 500;" data-tip="Spend-weighted average RegionRiskFactor across all suppliers">Geopolitical Vulnerability Index</div>
+      <div style="font-size: 0.7rem; color: #334155; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b;" id="geo-sub">Weighted regional exposure</div>
+    </div>
+
+    <!-- 4: Cost Deflection -->
+    <div class="kpi-card fade-up" style="animation-delay: 0.21s;" style="background: linear-gradient(135deg, #0c1220, #0a1628);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 7px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <span class="badge-low" style="font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; font-weight: 600;">SAVINGS</span>
+      </div>
+      <div class="mono" style="font-size: 1.75rem; font-weight: 700; line-height: 1;" id="kpi-deflection">
+        <span class="gold-text">PKR 0.0M</span>
+      </div>
+      <div style="font-size: 0.78rem; color: #64748b; margin-top: 5px; font-weight: 500;" data-tip="Estimated savings by routing high-risk spend to optimal vendor alternatives">Potential Cost Deflection</div>
+      <div style="font-size: 0.7rem; color: #334155; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b;" id="deflection-sub">Based on current scenario weight</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCENARIO SIMULATOR + CHART
+══════════════════════════════════════════════════════════════ -->
+<section id="analytics" style="max-width: 1400px; margin: 0 auto; padding: 0 20px 24px;">
+  <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px; align-items: start;">
+
+    <!-- Scenario Simulator Panel -->
+    <div class="card" style="padding: 20px;">
+      <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px;">⚡ Scenario Simulator</div>
+
+      <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 6px;">Spend Deflection Weight Matrix</label>
+      <select id="scenarioSelect" class="dark-select" style="width: 100%; padding: 9px 12px; margin-bottom: 16px;" onchange="runScenario()">
+        <option value="0.15">Conservative — 15% Deflection</option>
+        <option value="0.25" selected>Moderate — 25% Deflection</option>
+        <option value="0.40">Aggressive — 40% Deflection</option>
+        <option value="0.55">Transformational — 55% Deflection</option>
+      </select>
+
+      <div class="hr-gold" style="margin-bottom: 16px;"></div>
+
+      <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px;">Scenario Output</div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.12); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.68rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">Deflected Spend</div>
+          <div class="mono" style="font-size: 1.3rem; color: #fbbf24; font-weight: 700;" id="sim-deflected">PKR 0.0M</div>
+        </div>
+        <div style="background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.15); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.68rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">Estimated Net Savings</div>
+          <div class="mono" style="font-size: 1.3rem; color: #4ade80; font-weight: 700;" id="sim-savings">PKR 0.0M</div>
+        </div>
+        <div style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.15); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.68rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;">Vendors to Re-evaluate</div>
+          <div class="mono" style="font-size: 1.3rem; color: #60a5fa; font-weight: 700;" id="sim-vendors">0</div>
+        </div>
+      </div>
+
+      <div class="hr-gold" style="margin: 16px 0;"></div>
+
+      <div style="font-size: 0.68rem; color: #334155; line-height: 1.6;">
+        Scenario savings calculated as a blended rate assuming 18% unit cost reduction when switching underperforming vendors to market-optimal alternatives.
+      </div>
+    </div>
+
+    <!-- Dual-Axis Chart -->
+    <div class="card" style="padding: 20px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">📊 Dual-Axis Performance Graph</div>
+          <div style="font-size: 0.8rem; color: #94a3b8;">Vendor Spend vs. Quality/Risk Rate</div>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: 0.7rem; color: #64748b;">
+          <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 3px; background: #fbbf24; display: inline-block; border-radius: 2px;"></span> Annual Spend</span>
+          <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 3px; background: rgba(255,255,255,0.4); display: inline-block; border-radius: 2px;"></span> Quality Score</span>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="dualAxisChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     RISK MATRIX TABLE
+══════════════════════════════════════════════════════════════ -->
+<section id="risk-matrix" style="max-width: 1400px; margin: 0 auto; padding: 0 20px 40px;">
+  <div class="card" style="overflow: hidden;">
+    <!-- Table header -->
+    <div style="padding: 18px 20px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);">
+      <div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">🔍 Active Supplier Risk Matrix</div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">Full analytical breakdown with dynamic filter engine</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <!-- Search input -->
+        <div style="position: relative;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5" style="position:absolute; left: 10px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="tableSearch" type="text" placeholder="Search vendor..." onkeyup="filterTable()" style="background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px 7px 28px; font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--text-primary); width: 160px; outline: none;" onfocus="this.style.borderColor='rgba(251,191,36,0.5)'" onblur="this.style.borderColor='var(--border)'" />
+        </div>
+        <select id="riskFilter" class="dark-select" style="padding: 7px 12px;" onchange="filterTable()">
+          <option value="all">All Vendors</option>
+          <option value="high">High Concentration Warnings</option>
+          <option value="underperform">Underperforming Vendors</option>
+          <option value="low">Low Risk / Optimised</option>
+        </select>
+        <div style="font-size: 0.72rem; color: #475569; font-family: 'JetBrains Mono', monospace;" id="rowCountLabel">— rows</div>
+      </div>
+    </div>
+
+    <!-- Scrollable table -->
+    <div style="overflow-x: auto;">
+      <table class="risk-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align: left;">Vendor Name</th>
+            <th style="text-align: left;">Material Category</th>
+            <th style="text-align: left;">SKU ID</th>
+            <th style="text-align: right;">Annual Spend (PKR)</th>
+            <th style="text-align: right;">Spend Share</th>
+            <th style="text-align: right;">Quality Score</th>
+            <th style="text-align: right;">Lead Time Var.</th>
+            <th style="text-align: center;">Region Risk</th>
+            <th style="text-align: center;">Risk Level</th>
+          </tr>
+        </thead>
+        <tbody id="riskTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════════════ -->
+<footer style="border-top: 1px solid #1e293b; padding: 20px; text-align: center;">
+  <div style="max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="logo-f" style="width: 24px; height: 24px; font-size: 0.7rem; border-radius: 5px;">F</div>
+      <span style="font-size: 0.75rem; color: #334155; font-weight: 600;">Farafy Intelligence Suite</span>
+    </div>
+    <span style="font-size: 0.7rem; color: #1e293b;">©️ 2026 Farafy. All procurement intelligence reserved.</span>
+    <span style="font-size: 0.7rem; color: #334155; font-family: 'JetBrains Mono', monospace;">Muhammad Ali Ihsan · Enterprise</span>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT ENGINE
+══════════════════════════════════════════════════════════════ -->
+<script>
+// ──────────────────────────────────────────────────────────────
+// BASELINE DATASET (pre-loaded, production-grade)
+// ──────────────────────────────────────────────────────────────
+const BASELINE_DATA = [
+  // Vendor: NexaPak Industries (high concentration)
+  {SKUID:'NPK-001',MaterialName:'Corrugated Packaging',VendorName:'NexaPak Industries',SpendAmountPKR:42800000,LeadTimeVarianceDays:8,QualityRatingScore:82,RegionRiskFactor:3.2},
+  {SKUID:'NPK-002',MaterialName:'Bubble Wrap Premium',VendorName:'NexaPak Industries',SpendAmountPKR:18500000,LeadTimeVarianceDays:5,QualityRatingScore:84,RegionRiskFactor:3.2},
+  {SKUID:'NPK-003',MaterialName:'Foam Inserts Custom',VendorName:'NexaPak Industries',SpendAmountPKR:12200000,LeadTimeVarianceDays:11,QualityRatingScore:79,RegionRiskFactor:3.2},
+  {SKUID:'NPK-004',MaterialName:'Stretch Film Rolls',VendorName:'NexaPak Industries',SpendAmountPKR:9100000,LeadTimeVarianceDays:4,QualityRatingScore:87,RegionRiskFactor:3.2},
+  // Vendor: SteelMark Corp
+  {SKUID:'SMC-101',MaterialName:'Cold-Rolled Steel Sheet',VendorName:'SteelMark Corp',SpendAmountPKR:38700000,LeadTimeVarianceDays:14,QualityRatingScore:91,RegionRiskFactor:2.1},
+  {SKUID:'SMC-102',MaterialName:'Galvanized Steel Tubes',VendorName:'SteelMark Corp',SpendAmountPKR:22400000,LeadTimeVarianceDays:9,QualityRatingScore:89,RegionRiskFactor:2.1},
+  {SKUID:'SMC-103',MaterialName:'Structural Angle Iron',VendorName:'SteelMark Corp',SpendAmountPKR:14800000,LeadTimeVarianceDays:7,QualityRatingScore:93,RegionRiskFactor:2.1},
+  // Vendor: GlobalChem Solutions (high risk region)
+  {SKUID:'GCS-201',MaterialName:'Industrial Solvent ISO',VendorName:'GlobalChem Solutions',SpendAmountPKR:29600000,LeadTimeVarianceDays:21,QualityRatingScore:68,RegionRiskFactor:7.8},
+  {SKUID:'GCS-202',MaterialName:'Polymer Resin Grade A',VendorName:'GlobalChem Solutions',SpendAmountPKR:17300000,LeadTimeVarianceDays:18,QualityRatingScore:71,RegionRiskFactor:7.8},
+  {SKUID:'GCS-203',MaterialName:'Adhesive Compound Mix',VendorName:'GlobalChem Solutions',SpendAmountPKR:8900000,LeadTimeVarianceDays:16,QualityRatingScore:65,RegionRiskFactor:7.8},
+  // Vendor: LogiTech Components
+  {SKUID:'LTC-301',MaterialName:'PCB Assembly Units',VendorName:'LogiTech Components',SpendAmountPKR:31200000,LeadTimeVarianceDays:6,QualityRatingScore:95,RegionRiskFactor:1.5},
+  {SKUID:'LTC-302',MaterialName:'Connector Harness Set',VendorName:'LogiTech Components',SpendAmountPKR:16800000,LeadTimeVarianceDays:4,QualityRatingScore:97,RegionRiskFactor:1.5},
+  {SKUID:'LTC-303',MaterialName:'Capacitor Array SMD',VendorName:'LogiTech Components',SpendAmountPKR:7400000,LeadTimeVarianceDays:3,QualityRatingScore:96,RegionRiskFactor:1.5},
+  // Vendor: AgroBase Pakistan
+  {SKUID:'ABP-401',MaterialName:'Cotton Yarn Grade B',VendorName:'AgroBase Pakistan',SpendAmountPKR:19500000,LeadTimeVarianceDays:12,QualityRatingScore:77,RegionRiskFactor:4.1},
+  {SKUID:'ABP-402',MaterialName:'Raw Cotton Bales',VendorName:'AgroBase Pakistan',SpendAmountPKR:24800000,LeadTimeVarianceDays:15,QualityRatingScore:73,RegionRiskFactor:4.1},
+  {SKUID:'ABP-403',MaterialName:'Polyester Blend Fiber',VendorName:'AgroBase Pakistan',SpendAmountPKR:11200000,LeadTimeVarianceDays:10,QualityRatingScore:81,RegionRiskFactor:4.1},
+  // Vendor: PrimePlastics Ltd
+  {SKUID:'PPL-501',MaterialName:'HDPE Granules',VendorName:'PrimePlastics Ltd',SpendAmountPKR:15600000,LeadTimeVarianceDays:7,QualityRatingScore:88,RegionRiskFactor:2.5},
+  {SKUID:'PPL-502',MaterialName:'ABS Injection Moulding',VendorName:'PrimePlastics Ltd',SpendAmountPKR:9800000,LeadTimeVarianceDays:5,QualityRatingScore:90,RegionRiskFactor:2.5},
+  {SKUID:'PPL-503',MaterialName:'PVC Compound Flexible',VendorName:'PrimePlastics Ltd',SpendAmountPKR:6400000,LeadTimeVarianceDays:4,QualityRatingScore:86,RegionRiskFactor:2.5},
+  // Vendor: EliteForge Metals
+  {SKUID:'EFM-601',MaterialName:'Aluminium Extrusion',VendorName:'EliteForge Metals',SpendAmountPKR:26500000,LeadTimeVarianceDays:11,QualityRatingScore:92,RegionRiskFactor:2.0},
+  {SKUID:'EFM-602',MaterialName:'Bronze Casting Alloy',VendorName:'EliteForge Metals',SpendAmountPKR:11800000,LeadTimeVarianceDays:9,QualityRatingScore:94,RegionRiskFactor:2.0},
+  // Vendor: FastFuel Energy (high risk)
+  {SKUID:'FFE-701',MaterialName:'Diesel HSD Bulk',VendorName:'FastFuel Energy',SpendAmountPKR:34200000,LeadTimeVarianceDays:3,QualityRatingScore:58,RegionRiskFactor:6.5},
+  {SKUID:'FFE-702',MaterialName:'Industrial Lubricants',VendorName:'FastFuel Energy',SpendAmountPKR:14700000,LeadTimeVarianceDays:2,QualityRatingScore:62,RegionRiskFactor:6.5},
+  // Vendor: Medika Pharma Supplies
+  {SKUID:'MPS-801',MaterialName:'Safety Gloves Nitrile',VendorName:'Medika Pharma Supplies',SpendAmountPKR:8200000,LeadTimeVarianceDays:5,QualityRatingScore:89,RegionRiskFactor:1.8},
+  {SKUID:'MPS-802',MaterialName:'Protective Eye Shields',VendorName:'Medika Pharma Supplies',SpendAmountPKR:4100000,LeadTimeVarianceDays:3,QualityRatingScore:92,RegionRiskFactor:1.8},
+  {SKUID:'MPS-803',MaterialName:'Industrial Face Masks',VendorName:'Medika Pharma Supplies',SpendAmountPKR:3400000,LeadTimeVarianceDays:2,QualityRatingScore:91,RegionRiskFactor:1.8},
+  // Vendor: TechPrint Bureau
+  {SKUID:'TPB-901',MaterialName:'Offset Print Labels',VendorName:'TechPrint Bureau',SpendAmountPKR:5800000,LeadTimeVarianceDays:6,QualityRatingScore:83,RegionRiskFactor:1.2},
+  {SKUID:'TPB-902',MaterialName:'Holographic Stickers',VendorName:'TechPrint Bureau',SpendAmountPKR:2900000,LeadTimeVarianceDays:4,QualityRatingScore:86,RegionRiskFactor:1.2},
+  {SKUID:'TPB-903',MaterialName:'Barcoded Wristbands',VendorName:'TechPrint Bureau',SpendAmountPKR:1800000,LeadTimeVarianceDays:3,QualityRatingScore:88,RegionRiskFactor:1.2},
+  {SKUID:'TPB-904',MaterialName:'Product Catalogues A4',VendorName:'TechPrint Bureau',SpendAmountPKR:2200000,LeadTimeVarianceDays:5,QualityRatingScore:84,RegionRiskFactor:1.2},
+  // Extra records
+  {SKUID:'NPK-005',MaterialName:'Kraft Paper Rolls',VendorName:'NexaPak Industries',SpendAmountPKR:6700000,LeadTimeVarianceDays:6,QualityRatingScore:81,RegionRiskFactor:3.2},
+  {SKUID:'GCS-204',MaterialName:'Release Agent Spray',VendorName:'GlobalChem Solutions',SpendAmountPKR:4500000,LeadTimeVarianceDays:14,QualityRatingScore:66,RegionRiskFactor:7.8},
+  {SKUID:'SMC-104',MaterialName:'Stainless Flat Bar',VendorName:'SteelMark Corp',SpendAmountPKR:9600000,LeadTimeVarianceDays:8,QualityRatingScore:90,RegionRiskFactor:2.1}
+];
+
+// ──────────────────────────────────────────────────────────────
+// GLOBAL STATE
+// ──────────────────────────────────────────────────────────────
+let currentData = [...BASELINE_DATA];
+let dualChart = null;
+let allTableRows = [];
+
+// ──────────────────────────────────────────────────────────────
+// UTILITY FUNCTIONS
+// ──────────────────────────────────────────────────────────────
+function formatPKR(n) {
+  if (n >= 1e9) return 'PKR ' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return 'PKR ' + (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return 'PKR ' + (n/1e3).toFixed(0) + 'K';
+  return 'PKR ' + n.toFixed(0);
+}
+
+function formatM(n) {
+  return 'PKR ' + (n/1e6).toFixed(2) + 'M';
+}
+
+function getRiskLevel(row, spendShare) {
+  // Concentration risk: single vendor > 25% spend
+  const isConcentrated = spendShare > 25;
+  // Quality risk: below 75
+  const isPoorQuality = row.QualityRatingScore < 75;
+  // Geo risk: region > 5
+  const isHighGeo = row.RegionRiskFactor > 5;
+  // Lead time risk: > 14 days
+  const isHighLead = row.LeadTimeVarianceDays > 14;
+
+  const score = (isConcentrated ? 2 : 0) + (isPoorQuality ? 2 : 0) + (isHighGeo ? 1 : 0) + (isHighLead ? 1 : 0);
+
+  if (score >= 3) return 'critical';
+  if (score >= 2) return 'high';
+  if (score >= 1) return 'medium';
+  return 'low';
+}
+
+function getRiskBadgeHTML(level) {
+  const map = {
+    critical: { cls: 'badge-crit',  label: '⚠ Critical'   },
+    high:     { cls: 'badge-high',  label: 'High Risk'     },
+    medium:   { cls: 'badge-med',   label: 'Moderate'      },
+    low:      { cls: 'badge-low',   label: '✓ Optimised'   }
+  };
+  const { cls, label } = map[level] || map.low;
+  return `<span class="${cls}" style="font-size:0.65rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; white-space: nowrap;">${label}</span>`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// AGGREGATION ENGINE
+// ──────────────────────────────────────────────────────────────
+function aggregateByVendor(data) {
+  const map = {};
+  data.forEach(row => {
+    if (!map[row.VendorName]) {
+      map[row.VendorName] = {
+        VendorName: row.VendorName,
+        totalSpend: 0,
+        totalQuality: 0,
+        records: [],
+        skus: [],
+        maxLead: 0,
+        regionRisk: row.RegionRiskFactor
+      };
+    }
+    const v = map[row.VendorName];
+    v.totalSpend += row.SpendAmountPKR;
+    v.totalQuality += row.QualityRatingScore;
+    v.records.push(row);
+    v.skus.push(row.SKUID);
+    v.maxLead = Math.max(v.maxLead, row.LeadTimeVarianceDays);
+  });
+  // Compute averages
+  Object.values(map).forEach(v => {
+    v.avgQuality = v.totalQuality / v.records.length;
+    v.avgLead = v.records.reduce((s, r) => s + r.LeadTimeVarianceDays, 0) / v.records.length;
+    v.materialCategories = [...new Set(v.records.map(r => r.MaterialName.split(' ').slice(0,2).join(' ')))].join(', ');
+  });
+  return Object.values(map).sort((a,b) => b.totalSpend - a.totalSpend);
+}
+
+// ──────────────────────────────────────────────────────────────
+// KPI CALCULATIONS
+// ──────────────────────────────────────────────────────────────
+function calculateKPIs(data) {
+  const totalSpend = data.reduce((s, r) => s + r.SpendAmountPKR, 0);
+  const vendors = aggregateByVendor(data);
+
+  // 1. Breadth
+  const breadth = vendors.length;
+
+  // 2. HHI
+  const hhi = vendors.reduce((s, v) => {
+    const pct = (v.totalSpend / totalSpend) * 100;
+    return s + pct * pct;
+  }, 0);
+
+  // 3. Geopolitical Vulnerability Index
+  const gvi = data.reduce((s, r) => s + (r.RegionRiskFactor * (r.SpendAmountPKR / totalSpend)), 0);
+
+  // 4. Cost Deflection
+  const scenarioWeight = parseFloat(document.getElementById('scenarioSelect').value);
+  const highRiskSpend = vendors
+    .filter(v => getRiskLevel({QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk}, (v.totalSpend/totalSpend)*100) === 'high' ||
+                  getRiskLevel({QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk}, (v.totalSpend/totalSpend)*100) === 'critical')
+    .reduce((s,v) => s + v.totalSpend, 0);
+  const deflected = highRiskSpend * scenarioWeight;
+  const savings = deflected * 0.18; // 18% unit cost reduction assumption
+
+  return { breadth, hhi, gvi, deflected, savings, totalSpend, vendors, scenarioWeight, highRiskSpend };
+}
+
+// ──────────────────────────────────────────────────────────────
+// RENDER KPI CARDS
+// ──────────────────────────────────────────────────────────────
+function renderKPIs(kpis) {
+  // Breadth
+  document.getElementById('kpi-breadth').textContent = kpis.breadth;
+
+  // HHI
+  const hhiVal = Math.round(kpis.hhi);
+  document.getElementById('kpi-hhi').textContent = hhiVal.toLocaleString();
+  const hhiWarn = document.getElementById('hhi-warning');
+  const hhiBadge = document.getElementById('hhi-badge');
+  if (hhiVal > 2500) {
+    hhiBadge.className = 'badge-crit flash';
+    hhiBadge.textContent = '⚠ HIGH RISK';
+    hhiWarn.innerHTML = '<span style="color: #ef4444; font-weight:600;">⚠ High Concentration Risk</span>';
+  } else if (hhiVal > 1500) {
+    hhiBadge.className = 'badge-high';
+    hhiBadge.textContent = 'MODERATE';
+    hhiWarn.innerHTML = '<span style="color: #f97316; font-weight:600;">Moderate Concentration</span>';
+  } else {
+    hhiBadge.className = 'badge-low';
+    hhiBadge.textContent = 'LOW HHI';
+    hhiWarn.innerHTML = '<span style="color: #fbbf24;">Healthy Distribution</span>';
+  }
+
+  // GVI
+  document.getElementById('kpi-geo').textContent = kpis.gvi.toFixed(2);
+  const geoBadge = document.getElementById('geo-badge');
+  const geoSub = document.getElementById('geo-sub');
+  if (kpis.gvi > 4.5) {
+    geoBadge.className = 'badge-crit';
+    geoBadge.textContent = 'CRITICAL';
+    geoSub.innerHTML = '<span style="color:#ef4444;">Elevated geopolitical exposure</span>';
+  } else if (kpis.gvi > 3) {
+    geoBadge.className = 'badge-high';
+    geoBadge.textContent = 'ELEVATED';
+    geoSub.innerHTML = '<span style="color:#f97316;">Regional supply chain risk</span>';
+  } else {
+    geoBadge.className = 'badge-med';
+    geoBadge.textContent = 'GEO';
+    geoSub.innerHTML = 'Weighted regional exposure';
+  }
+
+  // Cost Deflection
+  document.getElementById('kpi-deflection').innerHTML = `<span class="gold-text mono" style="font-size:1.75rem; font-weight:700;">Save ${formatM(kpis.savings)}</span>`;
+  document.getElementById('deflection-sub').textContent = `On ${(kpis.scenarioWeight*100).toFixed(0)}% deflection of high-risk spend`;
+
+  // Scenario simulator panel
+  document.getElementById('sim-deflected').textContent = formatM(kpis.deflected);
+  document.getElementById('sim-savings').textContent = formatM(kpis.savings);
+  const highRiskCount = kpis.vendors.filter(v => {
+    const r = getRiskLevel({QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk}, (v.totalSpend/kpis.totalSpend)*100);
+    return r === 'high' || r === 'critical';
+  }).length;
+  document.getElementById('sim-vendors').textContent = highRiskCount;
+}
+
+// ──────────────────────────────────────────────────────────────
+// RENDER CHART
+// ──────────────────────────────────────────────────────────────
+function renderChart(vendors, totalSpend) {
+  const labels = vendors.map(v => v.VendorName.length > 16 ? v.VendorName.substring(0, 15) + '…' : v.VendorName);
+  const spends = vendors.map(v => v.totalSpend / 1e6);
+  const qualities = vendors.map(v => v.avgQuality);
+
+  const ctx = document.getElementById('dualAxisChart').getContext('2d');
+
+  if (dualChart) { dualChart.destroy(); }
+
+  dualChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Annual Spend (PKR M)',
+          data: spends,
+          backgroundColor: vendors.map(v => {
+            const pct = (v.totalSpend/totalSpend)*100;
+            const risk = getRiskLevel({QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk}, pct);
+            if (risk === 'critical') return 'rgba(239,68,68,0.7)';
+            if (risk === 'high')     return 'rgba(249,115,22,0.65)';
+            return 'rgba(251,191,36,0.75)';
+          }),
+          borderColor: vendors.map(v => {
+            const pct = (v.totalSpend/totalSpend)*100;
+            const risk = getRiskLevel({QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk}, pct);
+            if (risk === 'critical') return 'rgba(239,68,68,1)';
+            if (risk === 'high')     return 'rgba(249,115,22,1)';
+            return 'rgba(251,191,36,1)';
+          }),
+          borderWidth: 1,
+          borderRadius: 5,
+          yAxisID: 'y',
+          order: 2
+        },
+        {
+          label: 'Avg. Quality Score',
+          data: qualities,
+          type: 'line',
+          borderColor: 'rgba(248,250,252,0.55)',
+          backgroundColor: 'rgba(248,250,252,0.06)',
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(248,250,252,0.8)',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.35,
+          fill: true,
+          yAxisID: 'y1',
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f172a',
+          borderColor: '#1e293b',
+          borderWidth: 1,
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          padding: 12,
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? ` Spend: PKR ${ctx.raw.toFixed(1)}M`
+              : ` Quality: ${ctx.raw.toFixed(1)}/100`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30,41,59,0.6)', drawTicks: false },
+          ticks: { color: '#475569', font: { size: 10, family: 'Inter' }, maxRotation: 40, minRotation: 30 },
+          border: { color: 'rgba(30,41,59,0.8)' }
+        },
+        y: {
+          position: 'left',
+          grid: { color: 'rgba(30,41,59,0.5)', drawTicks: false },
+          ticks: { color: '#475569', font: { size: 10, family: 'Inter' }, callback: v => 'M' + v },
+          border: { color: 'transparent', dash: [4,4] },
+          title: { display: false }
+        },
+        y1: {
+          position: 'right',
+          min: 40, max: 100,
+          grid: { display: false },
+          ticks: { color: '#475569', font: { size: 10, family: 'Inter' }, callback: v => v + '' },
+          border: { color: 'transparent' }
+        }
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// RENDER TABLE
+// ──────────────────────────────────────────────────────────────
+function renderTable(data) {
+  const totalSpend = data.reduce((s, r) => s + r.SpendAmountPKR, 0);
+  const tbody = document.getElementById('riskTableBody');
+  tbody.innerHTML = '';
+
+  // Group to get per-vendor totals for spend share
+  const vendorTotals = {};
+  data.forEach(r => {
+    vendorTotals[r.VendorName] = (vendorTotals[r.VendorName] || 0) + r.SpendAmountPKR;
+  });
+
+  allTableRows = data.map(row => {
+    const spendShare = (vendorTotals[row.VendorName] / totalSpend) * 100;
+    const risk = getRiskLevel(row, spendShare);
+    return { row, spendShare, risk };
+  });
+
+  renderTableRows(allTableRows);
+}
+
+function renderTableRows(rows) {
+  const tbody = document.getElementById('riskTableBody');
+  tbody.innerHTML = '';
+  rows.forEach(({ row, spendShare, risk }) => {
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-risk', risk);
+    tr.setAttribute('data-vendor', row.VendorName.toLowerCase());
+    tr.setAttribute('data-quality', row.QualityRatingScore);
+    tr.innerHTML = `
+      <td style="font-weight:600; color: #e2e8f0;">${row.VendorName}</td>
+      <td style="color: #94a3b8; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row.MaterialName}</td>
+      <td><span class="mono" style="font-size:0.75rem; color:#64748b;">${row.SKUID}</span></td>
+      <td style="text-align:right;" class="mono">${formatPKR(row.SpendAmountPKR)}</td>
+      <td style="text-align:right;">
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+          <div style="width:40px; height:4px; background:#1e293b; border-radius:2px; overflow:hidden;">
+            <div style="width:${Math.min(spendShare,100)}%; height:100%; background: ${spendShare>20?'#ef4444':spendShare>10?'#f97316':'#fbbf24'}; border-radius:2px;"></div>
+          </div>
+          <span class="mono" style="font-size:0.75rem; color:${spendShare>20?'#f87171':spendShare>10?'#fb923c':'#94a3b8'};">${spendShare.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td style="text-align:right;">
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:5px;">
+          <span style="font-size:0.8rem; font-weight:600; color:${row.QualityRatingScore>=85?'#4ade80':row.QualityRatingScore>=70?'#fbbf24':'#f87171'};">${row.QualityRatingScore}</span>
+          <span style="font-size:0.68rem; color:#475569;">/100</span>
+        </div>
+      </td>
+      <td style="text-align:right;" class="mono">
+        <span style="color:${row.LeadTimeVarianceDays>14?'#f87171':row.LeadTimeVarianceDays>7?'#fbbf24':'#4ade80'};">+${row.LeadTimeVarianceDays}d</span>
+      </td>
+      <td style="text-align:center;">
+        <span style="font-size:0.8rem; font-weight:700; color:${row.RegionRiskFactor>5?'#f87171':row.RegionRiskFactor>3?'#fbbf24':'#60a5fa'};">${row.RegionRiskFactor.toFixed(1)}</span>
+      </td>
+      <td style="text-align:center;">${getRiskBadgeHTML(risk)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('rowCountLabel').textContent = `${rows.length} row${rows.length !== 1 ? 's' : ''}`;
+}
+
+// ──────────────────────────────────────────────────────────────
+// FILTER ENGINE
+// ──────────────────────────────────────────────────────────────
+function filterTable() {
+  const filterVal = document.getElementById('riskFilter').value;
+  const searchVal = document.getElementById('tableSearch').value.toLowerCase().trim();
+
+  const filtered = allTableRows.filter(({ row, spendShare, risk }) => {
+    // Search
+    const matchSearch = !searchVal || row.VendorName.toLowerCase().includes(searchVal) || row.MaterialName.toLowerCase().includes(searchVal) || row.SKUID.toLowerCase().includes(searchVal);
+    // Risk filter
+    let matchRisk = true;
+    if (filterVal === 'high') matchRisk = risk === 'critical' || risk === 'high';
+    else if (filterVal === 'underperform') matchRisk = row.QualityRatingScore < 75;
+    else if (filterVal === 'low') matchRisk = risk === 'low';
+    return matchSearch && matchRisk;
+  });
+
+  renderTableRows(filtered);
+}
+
+// ──────────────────────────────────────────────────────────────
+// SCENARIO RUNNER
+// ──────────────────────────────────────────────────────────────
+function runScenario() {
+  const kpis = calculateKPIs(currentData);
+  renderKPIs(kpis);
+}
+
+// ──────────────────────────────────────────────────────────────
+// FULL RENDER PIPELINE
+// ──────────────────────────────────────────────────────────────
+function renderAll(data) {
+  currentData = data;
+  const kpis = calculateKPIs(data);
+  renderKPIs(kpis);
+  renderChart(kpis.vendors, kpis.totalSpend);
+  renderTable(data);
+}
+
+// ──────────────────────────────────────────────────────────────
+// FILE UPLOAD
+// ──────────────────────────────────────────────────────────────
+function triggerFileUpload() {
+  document.getElementById('csvFileInput').click();
+}
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const parsed = parseCSV(text);
+    if (parsed.length === 0) {
+      alert('No valid data found. Ensure your CSV has the correct column headers:\nSKUID, MaterialName, VendorName, SpendAmountPKR, LeadTimeVarianceDays, QualityRatingScore, RegionRiskFactor');
+      return;
+    }
+    // Update banner
+    document.getElementById('ingestMsg').innerHTML = `Ingested <strong style="color:#f1f5f9;">${file.name}</strong> — ${parsed.length} procurement records parsed and analysed.`;
+    document.getElementById('recordCount').textContent = `${parsed.length} records`;
+    document.getElementById('dateRange').textContent = 'Uploaded dataset';
+    renderAll(parsed);
+    // Reset file input
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  const required = ['SKUID','MaterialName','VendorName','SpendAmountPKR','LeadTimeVarianceDays','QualityRatingScore','RegionRiskFactor'];
+
+  // Map headers (case-insensitive)
+  const headerMap = {};
+  required.forEach(req => {
+    const idx = headers.findIndex(h => h.toLowerCase() === req.toLowerCase());
+    headerMap[req] = idx;
+  });
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < headers.length) continue;
+    const row = {};
+    let valid = true;
+    required.forEach(req => {
+      const idx = headerMap[req];
+      if (idx === -1 || idx === undefined) { valid = false; return; }
+      const val = cols[idx] ? cols[idx].replace(/"/g,'').trim() : '';
+      if (req === 'SKUID' || req === 'MaterialName' || req === 'VendorName') {
+        row[req] = val;
+      } else {
+        row[req] = parseFloat(val);
+        if (isNaN(row[req])) valid = false;
+      }
+    });
+    if (valid && row.VendorName) rows.push(row);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { result.push(current); current = ''; continue; }
+    current += ch;
+  }
+  result.push(current);
+  return result;
+}
+
+// ──────────────────────────────────────────────────────────────
+// CSV TEMPLATE DOWNLOAD
+// ──────────────────────────────────────────────────────────────
+function downloadTemplate() {
+  const headers = 'SKUID,MaterialName,VendorName,SpendAmountPKR,LeadTimeVarianceDays,QualityRatingScore,RegionRiskFactor';
+  const samples = [
+    'EX-001,Steel Sheet Grade A,VendorAlpha Ltd,15000000,5,88,2.1',
+    'EX-002,Industrial Solvent,VendorBeta Corp,8500000,18,63,7.2',
+    'EX-003,Polymer Resin,VendorGamma Inc,22000000,7,91,1.8',
+    'EX-004,Cotton Bales,VendorDelta Co,9800000,12,74,4.5',
+    'EX-005,PCB Components,VendorEpsilon,31000000,4,96,1.2'
+  ];
+  const csvContent = [headers, ...samples].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Farafy_Procurement_Template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ──────────────────────────────────────────────────────────────
+// EXPORT STRATEGY CSV
+// ──────────────────────────────────────────────────────────────
+function exportStrategy() {
+  const totalSpend = currentData.reduce((s, r) => s + r.SpendAmountPKR, 0);
+  const vendors = aggregateByVendor(currentData);
+  const scenarioWeight = parseFloat(document.getElementById('scenarioSelect').value);
+
+  const rows = [
+    ['Farafy — Procurement Optimisation Strategy Report'],
+    ['Generated:', new Date().toLocaleString()],
+    ['Scenario Deflection Weight:', (scenarioWeight * 100) + '%'],
+    ['Total Portfolio Spend:', 'PKR ' + (totalSpend/1e6).toFixed(2) + 'M'],
+    [],
+    ['Vendor Name', 'Total Annual Spend (PKR)', 'Spend Share (%)', 'Avg Quality Score', 'Avg Lead Time Var (Days)', 'Region Risk Factor', 'Calculated Risk Level', 'Action Required', 'Estimated Deflected Spend (PKR)', 'Projected Savings (PKR)']
+  ];
+
+  vendors.forEach(v => {
+    const spendShare = (v.totalSpend / totalSpend) * 100;
+    const risk = getRiskLevel({ QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk }, spendShare);
+    const isHighRisk = risk === 'high' || risk === 'critical';
+    const deflected = isHighRisk ? v.totalSpend * scenarioWeight : 0;
+    const savings = deflected * 0.18;
+    const action = isHighRisk ? 'Initiate Alternative Vendor Sourcing' : risk === 'medium' ? 'Monitor & Review Quarterly' : 'Maintain & Optimise';
+    rows.push([
+      v.VendorName,
+      v.totalSpend.toFixed(0),
+      spendShare.toFixed(2),
+      v.avgQuality.toFixed(1),
+      v.avgLead.toFixed(1),
+      v.regionRisk.toFixed(1),
+      risk.charAt(0).toUpperCase() + risk.slice(1),
+      action,
+      deflected.toFixed(0),
+      savings.toFixed(0)
+    ]);
+  });
+
+  // Summary row
+  const totalSavings = vendors.reduce((s, v) => {
+    const spendShare = (v.totalSpend / totalSpend) * 100;
+    const risk = getRiskLevel({ QualityRatingScore: v.avgQuality, LeadTimeVarianceDays: v.avgLead, RegionRiskFactor: v.regionRisk }, spendShare);
+    const isHighRisk = risk === 'high' || risk === 'critical';
+    return s + (isHighRisk ? v.totalSpend * scenarioWeight * 0.18 : 0);
+  }, 0);
+
+  rows.push([]);
+  rows.push(['TOTAL PROJECTED SAVINGS', '', '', '', '', '', '', '', '', totalSavings.toFixed(0)]);
+
+  const csvContent = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Farafy_Strategy_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ──────────────────────────────────────────────────────────────
+// BOOT
+// ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderAll(BASELINE_DATA);
+});
+</script>
+</body>
+</html>
