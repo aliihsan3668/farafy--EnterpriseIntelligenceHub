@@ -3,6 +3,7 @@
 Live Applications:
 * 📈 Demand Forecasting Hub: [https://vercel.app](https://farafy.vercel.app/)
 * 🛡️ Strategic Procurement Auditor: [https://vercel.app](https://farafy-supplier-risk.vercel.app)
+* 🛳️ Customs Pre-Clearance Audit Engine: https://farafy-port.vercel.app/#
 
 SaaS Category: Enterprise Business Intelligence (BI) / Risk Management & Predictive Operations
 Design System: Premium Midnight Gold Palette (#030712 / #fbbf24)
